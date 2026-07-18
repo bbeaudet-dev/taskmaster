@@ -1,0 +1,3 @@
+{
+  "extends": "@taskmaster/config/tsconfig.base.json"
+}

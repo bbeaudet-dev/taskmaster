@@ -1,20 +1,21 @@
 import { api } from "@taskmaster/backend/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Container } from "@/components/container";
 import { DatePickerSheet } from "@/components/tasks/date-picker-sheet";
+import { ListControls } from "@/components/tasks/list-controls";
 import { SegmentButton } from "@/components/tasks/task-buttons";
 import { TaskCard } from "@/components/tasks/task-card";
 import { TaskForm } from "@/components/tasks/task-form";
 import {
 	type DateField,
 	type ListScope,
+	type ListId,
 	type Task,
 	type TaskFormPayload,
 	type TaskFormState,
-	type TaskId,
 	emptyTaskForm,
 	listScopes,
 } from "@/components/tasks/types";
@@ -26,15 +27,32 @@ export default function TasksScreen() {
 	const theme = colorScheme === "dark" ? NAV_THEME.dark : NAV_THEME.light;
 	const [scope, setScope] = useState<ListScope>("all");
 	const [form, setForm] = useState<TaskFormState>(emptyTaskForm);
+	const [selectedListId, setSelectedListId] = useState<ListId | undefined>();
+	const [newListName, setNewListName] = useState("");
+	const [shareEmail, setShareEmail] = useState("");
 	const [activeDateField, setActiveDateField] = useState<DateField | null>(
 		null,
 	);
-	const [editingTaskId, setEditingTaskId] = useState<TaskId | null>(null);
-	const tasks = useQuery(api.tasks.list, { scope });
+	const [editingTaskId, setEditingTaskId] = useState<Task["_id"] | null>(null);
+	const lists = useQuery(api.lists.list);
+	const tasks = useQuery(api.tasks.list, { scope, listId: selectedListId });
 	const createTask = useMutation(api.tasks.create);
 	const updateTask = useMutation(api.tasks.update);
 	const setCompleted = useMutation(api.tasks.setCompleted);
 	const removeTask = useMutation(api.tasks.remove);
+	const ensureDefaultList = useMutation(api.lists.ensureDefault);
+	const createList = useMutation(api.lists.create);
+	const inviteToList = useMutation(api.lists.invite);
+
+	useEffect(() => {
+		if (selectedListId !== undefined) {
+			return;
+		}
+
+		ensureDefaultList().then((listId) => {
+			setSelectedListId((current) => current ?? listId);
+		});
+	}, [ensureDefaultList, selectedListId]);
 
 	const resetForm = () => {
 		setForm(emptyTaskForm);
@@ -51,13 +69,35 @@ export default function TasksScreen() {
 			await updateTask({
 				taskId: editingTaskId,
 				...payload,
+				listId: selectedListId,
 				recurrence: payload.recurrence ?? null,
 			});
 		} else {
-			await createTask(payload);
+			await createTask({ ...payload, listId: selectedListId });
 		}
 
 		resetForm();
+	};
+
+	const submitList = async () => {
+		const name = newListName.trim();
+		if (name.length === 0) {
+			return;
+		}
+
+		const listId = await createList({ name });
+		setNewListName("");
+		setSelectedListId(listId);
+	};
+
+	const submitInvite = async () => {
+		const email = shareEmail.trim();
+		if (!selectedListId || email.length === 0) {
+			return;
+		}
+
+		await inviteToList({ listId: selectedListId, email });
+		setShareEmail("");
 	};
 
 	const editTask = (task: Task) => {
@@ -78,6 +118,19 @@ export default function TasksScreen() {
 			<ScrollView style={styles.scrollView} contentInsetAdjustmentBehavior="never">
 				<View style={styles.content}>
 					<Text style={[styles.heading, { color: theme.text }]}>Tasks</Text>
+
+					<ListControls
+						lists={lists}
+						selectedListId={selectedListId}
+						newListName={newListName}
+						shareEmail={shareEmail}
+						theme={theme}
+						onSelectList={setSelectedListId}
+						onChangeNewListName={setNewListName}
+						onCreateList={submitList}
+						onChangeShareEmail={setShareEmail}
+						onShareList={submitInvite}
+					/>
 
 					<TaskForm
 						form={form}
@@ -191,6 +244,7 @@ function buildTaskPayload(form: TaskFormState): TaskFormPayload | null {
 		doDate: form.doDate,
 		tags: parseTags(form.tags),
 		significance: form.significance,
+		listId: undefined,
 		recurrence: form.recurrence,
 	};
 }

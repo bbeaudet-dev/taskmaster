@@ -1,0 +1,29 @@
+---
+description: Architecture and type-safety conventions — clean modular code, and schema-derived types
+alwaysApply: true
+---
+
+# Coding conventions
+
+## Architecture
+
+- Favor clean, modular architecture with strong separation of concerns.
+- Keep modules small and single-purpose; separate business logic from I/O,
+  transport, and UI. Extract reusable logic into well-named functions/modules
+  instead of duplicating it.
+- For Convex, keep query/mutation/action wrappers thin — put real logic in
+  plain TypeScript helpers the wrappers call.
+
+## Types: one source of truth
+
+The Convex schema is the source of truth for data shapes — never hand-duplicate
+a type that can be derived from it.
+
+- Use the generated types from `convex/_generated/dataModel`: `Id<"table">`
+  for document ids and `Doc<"table">` for full documents. Do not re-declare
+  these as bare `string`s or hand-written object types.
+- Define each validator once (with `v` from `convex/values`) and reuse it
+  across the schema and function args; derive its TS type with
+  `Infer<typeof theValidator>` rather than re-typing the fields.
+- Let types flow from the database through Convex functions to the client
+  (end-to-end type safety) instead of re-declaring shapes at each layer.

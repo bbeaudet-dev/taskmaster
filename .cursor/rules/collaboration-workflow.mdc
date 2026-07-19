@@ -1,0 +1,25 @@
+---
+description: How to collaborate in this repo — review before commit, and let the user run servers/apps
+alwaysApply: true
+---
+
+# Collaboration workflow
+
+## Never commit unreviewed changes
+
+- After editing files, STOP and let the user review every change in Cursor's
+  IDE. The Approve/Deny UI disappears once files are committed, and the user
+  reviews every line before it lands.
+- Do NOT run `git commit` (or `git add` toward a commit) until the user has
+  explicitly said the changes look good / to commit.
+- This applies even when a task feels "done" — finishing edits is not
+  permission to commit.
+
+## Let the user run servers, apps, and tests
+
+- Do NOT start dev servers, Expo, or the app for the user to test. Instead,
+  print the exact command for them to run in their own terminal (e.g.
+  `bun run dev`, `bun run dev:native`, `bun run dev:server`).
+- Exception: you may run a command briefly yourself if YOU need to inspect a
+  specific log, error, or response to make progress. Keep it short and do not
+  leave long-running processes running.

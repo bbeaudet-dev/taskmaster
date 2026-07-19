@@ -30,6 +30,7 @@ export const create = mutation({
 		notes: v.optional(v.string()),
 		dueDate: v.optional(v.number()),
 		doDate: v.optional(v.number()),
+		listId: v.optional(v.id("lists")),
 		tags: v.optional(v.array(v.string())),
 		significance: v.optional(taskSignificance),
 		source: v.optional(taskSource),
@@ -45,11 +46,12 @@ export const create = mutation({
 export const list = query({
 	args: {
 		scope: v.optional(listScope),
+		listId: v.optional(v.id("lists")),
 	},
 	returns: v.array(taskDoc),
 	handler: async (ctx, args) => {
 		const ownerId = await requireOwnerId(ctx);
-		return await listTasksForOwner(ctx, ownerId, args.scope ?? "open");
+		return await listTasksForOwner(ctx, ownerId, args.scope ?? "open", args.listId);
 	},
 });
 
@@ -60,6 +62,7 @@ export const update = mutation({
 		notes: v.optional(v.union(v.string(), v.null())),
 		dueDate: v.optional(v.union(v.number(), v.null())),
 		doDate: v.optional(v.union(v.number(), v.null())),
+		listId: v.optional(v.union(v.id("lists"), v.null())),
 		tags: v.optional(v.union(v.array(v.string()), v.null())),
 		significance: v.optional(taskSignificance),
 		source: v.optional(taskSource),

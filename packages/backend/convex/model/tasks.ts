@@ -4,10 +4,17 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { authComponent } from "../auth";
 import type { Recurrence, TaskSignificance, TaskSource } from "../schema";
+import {
+	assertCanAccessList,
+	canAccessList,
+	ensureDefaultList,
+	listAccessibleLists,
+} from "./lists";
 import { getNextRecurringDates } from "./recurrence";
 import { recordTaskCompleted } from "./taskEvents";
 
 type TaskId = Id<"tasks">;
+type ListId = Id<"lists">;
 type TaskDoc = Doc<"tasks">;
 
 const fallbackOwnerId = "local-dev-owner";
@@ -17,6 +24,7 @@ export type TaskCreateInput = {
 	notes?: string;
 	dueDate?: number;
 	doDate?: number;
+	listId?: ListId;
 	tags?: string[];
 	significance?: TaskSignificance;
 	source?: TaskSource;
@@ -29,6 +37,7 @@ export type TaskUpdateInput = {
 	notes?: string | null;
 	dueDate?: number | null;
 	doDate?: number | null;
+	listId?: ListId | null;
 	tags?: string[] | null;
 	significance?: TaskSignificance;
 	source?: TaskSource;
@@ -53,9 +62,12 @@ export async function createTask(
 ) {
 	const title = cleanTitle(input.title);
 	const now = Date.now();
+	const listId = input.listId ?? (await ensureDefaultList(ctx, ownerId));
+	await assertCanAccessList(ctx, ownerId, listId);
 
 	return await ctx.db.insert("tasks", {
 		ownerId,
+		listId,
 		title,
 		notes: cleanOptionalText(input.notes),
 		dueDate: input.dueDate,
@@ -72,29 +84,36 @@ export async function listTasksForOwner(
 	ctx: QueryCtx,
 	ownerId: string,
 	scope: TaskListScope,
+	listId?: ListId,
 ) {
-	if (scope === "open") {
-		return await ctx.db
-			.query("tasks")
-			.withIndex("by_owner_and_completed", (q) =>
-				q.eq("ownerId", ownerId).eq("completedAt", undefined),
-			)
-			.collect();
+	if (listId !== undefined) {
+		await assertCanAccessList(ctx, ownerId, listId);
+		return filterByScope(
+			await ctx.db
+				.query("tasks")
+				.withIndex("by_list_and_completed", (q) => q.eq("listId", listId))
+				.collect(),
+			scope,
+		);
 	}
 
-	if (scope === "completed") {
-		return await ctx.db
-			.query("tasks")
-			.withIndex("by_owner_and_completed", (q) =>
-				q.eq("ownerId", ownerId).gt("completedAt", 0),
-			)
-			.collect();
-	}
-
-	return await ctx.db
+	const ownedTasks = await ctx.db
 		.query("tasks")
 		.withIndex("by_owner", (q) => q.eq("ownerId", ownerId))
 		.collect();
+	const sharedLists = (await listAccessibleLists(ctx, ownerId)).filter(
+		(list) => list.access === "shared",
+	);
+	const sharedTasksByList = await Promise.all(
+		sharedLists.map(async (list) =>
+			await ctx.db
+				.query("tasks")
+				.withIndex("by_list_and_completed", (q) => q.eq("listId", list._id))
+				.collect(),
+		),
+	);
+
+	return filterByScope([...ownedTasks, ...sharedTasksByList.flat()], scope);
 }
 
 export async function updateTask(
@@ -118,6 +137,14 @@ export async function updateTask(
 	}
 	if (input.doDate !== undefined) {
 		patch.doDate = input.doDate ?? undefined;
+	}
+	if (input.listId !== undefined) {
+		if (input.listId === null) {
+			patch.listId = await ensureDefaultList(ctx, ownerId);
+		} else {
+			await assertCanAccessList(ctx, ownerId, input.listId);
+			patch.listId = input.listId;
+		}
 	}
 	if (input.tags !== undefined) {
 		patch.tags = input.tags === null ? undefined : cleanTags(input.tags);
@@ -187,11 +214,25 @@ async function getOwnedTask(
 	if (!task) {
 		throw new ConvexError("Task not found");
 	}
+	if (task.listId !== undefined && (await canAccessList(ctx, ownerId, task.listId))) {
+		return task;
+	}
 	if (task.ownerId !== ownerId) {
 		throw new ConvexError("Not authorized");
 	}
 
 	return task;
+}
+
+function filterByScope(tasks: TaskDoc[], scope: TaskListScope) {
+	if (scope === "open") {
+		return tasks.filter((task) => task.completedAt === undefined);
+	}
+	if (scope === "completed") {
+		return tasks.filter((task) => task.completedAt !== undefined);
+	}
+
+	return tasks;
 }
 
 function cleanTitle(title: string) {

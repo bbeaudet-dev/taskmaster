@@ -25,6 +25,29 @@ export type TaskSignificance = Infer<typeof taskSignificance>;
 export const taskEventType = v.union(v.literal("completed"));
 export type TaskEventType = Infer<typeof taskEventType>;
 
+export const listFields = {
+  ownerId: v.string(),
+  name: v.string(),
+  isDefault: v.boolean(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+};
+
+export const listShareFields = {
+  listId: v.id("lists"),
+  ownerId: v.string(),
+  sharedWithUserId: v.string(),
+  createdAt: v.number(),
+};
+
+export const listInviteFields = {
+  listId: v.id("lists"),
+  ownerId: v.string(),
+  email: v.string(),
+  createdAt: v.number(),
+  acceptedAt: v.optional(v.number()),
+};
+
 // A simplified, structured repeat rule (not raw iCal RRULE — easier to build
 // UI and logic against; RRULE stays available as a future escape hatch).
 // Model: a recurring task is a single row whose dates advance on completion,
@@ -53,6 +76,7 @@ export const taskFields = {
   // The task's owner (Better-Auth subject id). Kept separate from access:
   // sharing with other people will live in its own join table later.
   ownerId: v.string(),
+  listId: v.optional(v.id("lists")),
   title: v.string(),
   // Doubles as the description for now.
   notes: v.optional(v.string()),
@@ -83,11 +107,22 @@ export const taskEventFields = {
 };
 
 export default defineSchema({
+  lists: defineTable(listFields)
+    .index("by_owner", ["ownerId"])
+    .index("by_owner_and_default", ["ownerId", "isDefault"]),
+  listShares: defineTable(listShareFields)
+    .index("by_list", ["listId"])
+    .index("by_shared_with_user", ["sharedWithUserId"])
+    .index("by_owner", ["ownerId"]),
+  listInvites: defineTable(listInviteFields)
+    .index("by_email", ["email"])
+    .index("by_list", ["listId"]),
   tasks: defineTable(taskFields)
     .index("by_owner", ["ownerId"])
     .index("by_owner_and_completed", ["ownerId", "completedAt"])
     .index("by_owner_and_due", ["ownerId", "dueDate"])
-    .index("by_owner_and_do", ["ownerId", "doDate"]),
+    .index("by_owner_and_do", ["ownerId", "doDate"])
+    .index("by_list_and_completed", ["listId", "completedAt"]),
   taskEvents: defineTable(taskEventFields)
     .index("by_task", ["taskId"])
     .index("by_owner", ["ownerId"]),

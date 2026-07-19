@@ -11,6 +11,8 @@
 import type * as auth from "../auth.js";
 import type * as healthCheck from "../healthCheck.js";
 import type * as http from "../http.js";
+import type * as lists from "../lists.js";
+import type * as model_lists from "../model/lists.js";
 import type * as model_recurrence from "../model/recurrence.js";
 import type * as model_taskEvents from "../model/taskEvents.js";
 import type * as model_tasks from "../model/tasks.js";
@@ -27,6 +29,8 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   healthCheck: typeof healthCheck;
   http: typeof http;
+  lists: typeof lists;
+  "model/lists": typeof model_lists;
   "model/recurrence": typeof model_recurrence;
   "model/taskEvents": typeof model_taskEvents;
   "model/tasks": typeof model_tasks;

@@ -5,6 +5,7 @@ export type TaskId = Id<"tasks">;
 export type ListScope = "open" | "completed" | "all";
 export type Significance = "important" | "normal" | "someday";
 export type DateField = "doDate" | "dueDate";
+export type Recurrence = NonNullable<Task["recurrence"]>;
 
 export type TaskFormState = {
 	title: string;
@@ -13,6 +14,7 @@ export type TaskFormState = {
 	doDate: number | undefined;
 	tags: string;
 	significance: Significance;
+	recurrence: Recurrence | undefined;
 };
 
 export type TaskFormPayload = {
@@ -22,6 +24,7 @@ export type TaskFormPayload = {
 	doDate: number | undefined;
 	tags: string[] | undefined;
 	significance: Significance;
+	recurrence: Recurrence | undefined;
 };
 
 export const emptyTaskForm: TaskFormState = {
@@ -31,6 +34,7 @@ export const emptyTaskForm: TaskFormState = {
 	doDate: undefined,
 	tags: "",
 	significance: "normal",
+	recurrence: undefined,
 };
 
 export const listScopes: ListScope[] = ["open", "completed", "all"];

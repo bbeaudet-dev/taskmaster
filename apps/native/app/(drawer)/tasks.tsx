@@ -48,7 +48,11 @@ export default function TasksScreen() {
 		}
 
 		if (editingTaskId) {
-			await updateTask({ taskId: editingTaskId, ...payload });
+			await updateTask({
+				taskId: editingTaskId,
+				...payload,
+				recurrence: payload.recurrence ?? null,
+			});
 		} else {
 			await createTask(payload);
 		}
@@ -65,6 +69,7 @@ export default function TasksScreen() {
 			doDate: task.doDate,
 			tags: task.tags?.join(", ") ?? "",
 			significance: task.significance,
+			recurrence: task.recurrence,
 		});
 	};
 
@@ -186,6 +191,7 @@ function buildTaskPayload(form: TaskFormState): TaskFormPayload | null {
 		doDate: form.doDate,
 		tags: parseTags(form.tags),
 		significance: form.significance,
+		recurrence: form.recurrence,
 	};
 }
 

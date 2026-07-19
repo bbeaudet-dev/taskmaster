@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { formatDateField } from "@/lib/tasks/dates";
 
 import { ActionButton, SegmentButton } from "./task-buttons";
-import type { DateField, Significance, TaskFormState } from "./types";
+import { RecurrencePicker } from "./recurrence-picker";
+import type { DateField, TaskFormState } from "./types";
 
 type TaskFormProps = {
 	form: TaskFormState;
@@ -20,7 +21,7 @@ type TaskFormProps = {
 	onOpenDatePicker: (field: DateField) => void;
 };
 
-const significances: Significance[] = ["important", "normal", "someday"];
+const significances = ["important", "normal", "someday"] as const;
 
 export function TaskForm({
 	form,
@@ -113,6 +114,11 @@ export function TaskForm({
 					/>
 				))}
 			</View>
+			<RecurrencePicker
+				recurrence={form.recurrence}
+				textColor={theme.text}
+				onChange={(recurrence) => onChange({ ...form, recurrence })}
+			/>
 			<View style={styles.actionRow}>
 				<ActionButton
 					label={isEditing ? "Save" : "Add"}

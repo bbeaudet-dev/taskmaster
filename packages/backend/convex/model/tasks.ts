@@ -4,6 +4,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { authComponent } from "../auth";
 import type { Recurrence, TaskSignificance, TaskSource } from "../schema";
+import { getNextRecurringDates } from "./recurrence";
 
 type TaskId = Id<"tasks">;
 type TaskDoc = Doc<"tasks">;
@@ -141,11 +142,23 @@ export async function setCompleted(
 	completed: boolean,
 ) {
 	const task = await getOwnedTask(ctx, ownerId, taskId);
-	const completedAt = completed ? (task.completedAt ?? Date.now()) : undefined;
+	const now = Date.now();
+
+	if (completed && task.recurrence) {
+		const nextDates = getNextRecurringDates(task, now);
+		await ctx.db.patch(task._id, {
+			...nextDates,
+			completedAt: undefined,
+			updatedAt: now,
+		});
+		return null;
+	}
+
+	const completedAt = completed ? (task.completedAt ?? now) : undefined;
 
 	await ctx.db.patch(task._id, {
 		completedAt,
-		updatedAt: Date.now(),
+		updatedAt: now,
 	});
 	return null;
 }

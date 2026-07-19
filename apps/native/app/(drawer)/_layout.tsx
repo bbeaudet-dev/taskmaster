@@ -1,8 +1,6 @@
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { Drawer } from "expo-router/drawer";
 
-import { HeaderButton } from "@/components/header-button";
 import { NAV_THEME } from "@/lib/constants";
 import { useColorScheme } from "@/lib/use-color-scheme";
 
@@ -40,17 +38,12 @@ const DrawerLayout = () => {
         }}
       />
       <Drawer.Screen
-        name="(tabs)"
+        name="tasks"
         options={{
-          headerTitle: "Tabs",
-          drawerLabel: "Tabs",
+          headerTitle: "Tasks",
+          drawerLabel: "Tasks",
           drawerIcon: ({ size, color }) => (
-            <MaterialIcons name="border-bottom" size={size} color={color} />
-          ),
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <HeaderButton />
-            </Link>
+            <Ionicons name="checkmark-circle-outline" size={size} color={color} />
           ),
         }}
       />

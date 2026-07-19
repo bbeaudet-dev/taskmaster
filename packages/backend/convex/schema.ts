@@ -22,6 +22,9 @@ export const taskSignificance = v.union(
 );
 export type TaskSignificance = Infer<typeof taskSignificance>;
 
+export const taskEventType = v.union(v.literal("completed"));
+export type TaskEventType = Infer<typeof taskEventType>;
+
 // A simplified, structured repeat rule (not raw iCal RRULE — easier to build
 // UI and logic against; RRULE stays available as a future escape hatch).
 // Model: a recurring task is a single row whose dates advance on completion,
@@ -72,10 +75,20 @@ export const taskFields = {
   updatedAt: v.number(),
 };
 
+export const taskEventFields = {
+  taskId: v.id("tasks"),
+  ownerId: v.string(),
+  type: taskEventType,
+  at: v.number(),
+};
+
 export default defineSchema({
   tasks: defineTable(taskFields)
     .index("by_owner", ["ownerId"])
     .index("by_owner_and_completed", ["ownerId", "completedAt"])
     .index("by_owner_and_due", ["ownerId", "dueDate"])
     .index("by_owner_and_do", ["ownerId", "doDate"]),
+  taskEvents: defineTable(taskEventFields)
+    .index("by_task", ["taskId"])
+    .index("by_owner", ["ownerId"]),
 });

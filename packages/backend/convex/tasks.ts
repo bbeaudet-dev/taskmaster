@@ -9,6 +9,7 @@ import {
 	setCompleted as setTaskCompleted,
 	updateTask,
 } from "./model/tasks";
+import { getTaskCompletionStats } from "./model/taskEvents";
 import { recurrence, taskFields, taskSignificance, taskSource } from "./schema";
 
 const listScope = v.union(
@@ -80,6 +81,22 @@ export const setCompleted = mutation({
 	handler: async (ctx, args) => {
 		const ownerId = await requireOwnerId(ctx);
 		return await setTaskCompleted(ctx, ownerId, args.taskId, args.completed);
+	},
+});
+
+export const completionStats = query({
+	args: {
+		taskId: v.id("tasks"),
+		now: v.number(),
+	},
+	returns: v.object({
+		completionCount: v.number(),
+		currentStreak: v.number(),
+		lastCompletedAt: v.optional(v.number()),
+	}),
+	handler: async (ctx, args) => {
+		const ownerId = await requireOwnerId(ctx);
+		return await getTaskCompletionStats(ctx, ownerId, args.taskId, args.now);
 	},
 });
 

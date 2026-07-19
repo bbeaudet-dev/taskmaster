@@ -46,32 +46,34 @@ export const recurrence = v.object({
 });
 export type Recurrence = Infer<typeof recurrence>;
 
+export const taskFields = {
+  // The task's owner (Better-Auth subject id). Kept separate from access:
+  // sharing with other people will live in its own join table later.
+  ownerId: v.string(),
+  title: v.string(),
+  // Doubles as the description for now.
+  notes: v.optional(v.string()),
+  // Hard deadline (ms epoch). Past this = genuinely urgent.
+  dueDate: v.optional(v.number()),
+  // Optimistic "I'll get to it by" date, independent of the hard deadline.
+  // Also serves as a visible "I've committed to this" signal.
+  doDate: v.optional(v.number()),
+  // Inline for now; can migrate to a tags table + join when they need
+  // colors / renaming / counts.
+  tags: v.optional(v.array(v.string())),
+  significance: taskSignificance,
+  source: taskSource,
+  // Repeat rule. Absent => one-off task.
+  recurrence: v.optional(recurrence),
+  // null/undefined => open. Re-completing overwrites; if completion history
+  // is ever needed, add an append-only taskEvents log rather than columns.
+  completedAt: v.optional(v.number()),
+  // Set in every mutation (created-at comes free from _creationTime).
+  updatedAt: v.number(),
+};
+
 export default defineSchema({
-  tasks: defineTable({
-    // The task's owner (Better-Auth subject id). Kept separate from access:
-    // sharing with other people will live in its own join table later.
-    ownerId: v.string(),
-    title: v.string(),
-    // Doubles as the description for now.
-    notes: v.optional(v.string()),
-    // Hard deadline (ms epoch). Past this = genuinely urgent.
-    dueDate: v.optional(v.number()),
-    // Optimistic "I'll get to it by" date, independent of the hard deadline.
-    // Also serves as a visible "I've committed to this" signal.
-    doDate: v.optional(v.number()),
-    // Inline for now; can migrate to a tags table + join when they need
-    // colors / renaming / counts.
-    tags: v.optional(v.array(v.string())),
-    significance: taskSignificance,
-    source: taskSource,
-    // Repeat rule. Absent => one-off task.
-    recurrence: v.optional(recurrence),
-    // null/undefined => open. Re-completing overwrites; if completion history
-    // is ever needed, add an append-only taskEvents log rather than columns.
-    completedAt: v.optional(v.number()),
-    // Set in every mutation (created-at comes free from _creationTime).
-    updatedAt: v.number(),
-  })
+  tasks: defineTable(taskFields)
     .index("by_owner", ["ownerId"])
     .index("by_owner_and_completed", ["ownerId", "completedAt"])
     .index("by_owner_and_due", ["ownerId", "dueDate"])
